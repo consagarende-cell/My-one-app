@@ -1,0 +1,6 @@
+{
+  "name": "SafaOne",
+  "description": "Unified telecom and mobile money super-app for airtime, data bundles, wallet transfers, paybill, bonga rewards, and home fibre.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

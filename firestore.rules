@@ -1,0 +1,218 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- GLOBAL HARDENED HELPERS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isNonNegNumber(val) {
+      return (val is int || val is float) && val >= 0 && val <= 100000000;
+    }
+
+    function isNonNegInt(val) {
+      return val is int && val >= 0 && val <= 100000000;
+    }
+
+    // --- VALIDATION BLUEPRINTS ---
+    function isValidAccountProfile(data, userId) {
+      return data.userId == userId &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+        data.phoneNumber is string && data.phoneNumber.size() >= 7 && data.phoneNumber.size() <= 20 &&
+        data.planName is string && data.planName.size() >= 1 && data.planName.size() <= 50 &&
+        isNonNegNumber(data.airtimeBalance) &&
+        isNonNegNumber(data.mpesaBalance) &&
+        isNonNegNumber(data.savingsBalance) &&
+        isNonNegNumber(data.fulizaLimit) &&
+        isNonNegNumber(data.fulizaUsed) &&
+        isNonNegInt(data.dataBalanceMb) &&
+        isNonNegInt(data.minutesBalance) &&
+        isNonNegInt(data.smsBalance) &&
+        isNonNegInt(data.bongaPoints) &&
+        data.fibrePlanName is string && data.fibrePlanName.size() >= 1 && data.fibrePlanName.size() <= 50 &&
+        isNonNegNumber(data.fibreMonthlyFee) &&
+        data.fibreActive is bool &&
+        data.fibreExpiryLabel is string && data.fibreExpiryLabel.size() >= 1 && data.fibreExpiryLabel.size() <= 40 &&
+        data.hideBalances is bool;
+    }
+
+    function isValidWalletTransaction(data, userId) {
+      return data.userId == userId &&
+        data.receiptCode is string && data.receiptCode.size() >= 4 && data.receiptCode.size() <= 20 &&
+        data.type in [
+          'SEND_MONEY', 'PAY_BILL', 'BUY_GOODS', 'BUY_AIRTIME', 'BUY_BUNDLE',
+          'DEPOSIT', 'WITHDRAW', 'SAVINGS_IN', 'SAVINGS_OUT', 'BONGA_REDEEM', 'FIBRE_PAY'
+        ] &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 80 &&
+        data.counterparty is string && data.counterparty.size() >= 1 && data.counterparty.size() <= 80 &&
+        isNonNegNumber(data.amount) &&
+        isNonNegNumber(data.fee) &&
+        data.direction in ['DEBIT', 'CREDIT', 'INFO'] &&
+        data.source in ['MPESA', 'AIRTIME', 'BONGA', 'SAVINGS'] &&
+        isNonNegNumber(data.balanceAfter) &&
+        (!('note' in data) || (data.note is string && data.note.size() <= 160));
+    }
+
+    function isValidActiveBundle(data, userId) {
+      return data.userId == userId &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 60 &&
+        data.category in ['DATA', 'VOICE', 'ALL_IN_ONE', 'SMS', 'TUNUKIWA'] &&
+        isNonNegInt(data.dataMb) &&
+        isNonNegInt(data.minutes) &&
+        isNonNegInt(data.smsCount) &&
+        data.validityLabel is string && data.validityLabel.size() >= 1 && data.validityLabel.size() <= 30 &&
+        isNonNegNumber(data.priceKes);
+    }
+
+    function isValidSavedPayee(data, userId) {
+      return data.userId == userId &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 60 &&
+        data.payeeType in ['PHONE', 'PAYBILL', 'TILL'] &&
+        data.identifier is string && data.identifier.size() >= 1 && data.identifier.size() <= 30 &&
+        (!('accountRef' in data) || (data.accountRef is string && data.accountRef.size() <= 40));
+    }
+
+    // --- COLLECTIONS ---
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if false;
+
+      allow create: if isValidId(userId) &&
+        isOwner(userId) &&
+        incoming().keys().hasAll([
+          'userId', 'displayName', 'phoneNumber', 'planName',
+          'airtimeBalance', 'mpesaBalance', 'savingsBalance', 'fulizaLimit', 'fulizaUsed',
+          'dataBalanceMb', 'minutesBalance', 'smsBalance', 'bongaPoints',
+          'fibrePlanName', 'fibreMonthlyFee', 'fibreActive', 'fibreExpiryLabel',
+          'hideBalances', 'createdAt', 'updatedAt'
+        ]) &&
+        incoming().keys().hasOnly([
+          'userId', 'displayName', 'phoneNumber', 'planName',
+          'airtimeBalance', 'mpesaBalance', 'savingsBalance', 'fulizaLimit', 'fulizaUsed',
+          'dataBalanceMb', 'minutesBalance', 'smsBalance', 'bongaPoints',
+          'fibrePlanName', 'fibreMonthlyFee', 'fibreActive', 'fibreExpiryLabel',
+          'hideBalances', 'createdAt', 'updatedAt'
+        ]) &&
+        incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+        incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+        isValidAccountProfile(incoming(), userId);
+
+      allow update: if isValidId(userId) &&
+        isOwner(userId) &&
+        isValidAccountProfile(incoming(), userId) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+        (
+          // Action: Update wallet/balances/fibre/bonga/profile
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'displayName', 'phoneNumber', 'planName',
+            'airtimeBalance', 'mpesaBalance', 'savingsBalance', 'fulizaUsed',
+            'dataBalanceMb', 'minutesBalance', 'smsBalance', 'bongaPoints',
+            'fibrePlanName', 'fibreMonthlyFee', 'fibreActive', 'fibreExpiryLabel',
+            'hideBalances', 'updatedAt'
+          ])
+        );
+
+      allow delete: if false;
+
+      match /transactions/{transactionId} {
+        allow get: if isValidId(userId) && isValidId(transactionId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId);
+
+        allow create: if isValidId(userId) &&
+          isValidId(transactionId) &&
+          isOwner(userId) &&
+          incoming().keys().hasAll([
+            'userId', 'receiptCode', 'type', 'title', 'counterparty',
+            'amount', 'fee', 'direction', 'source', 'balanceAfter', 'createdAt'
+          ]) &&
+          incoming().keys().hasOnly([
+            'userId', 'receiptCode', 'type', 'title', 'counterparty',
+            'amount', 'fee', 'direction', 'source', 'balanceAfter', 'note', 'createdAt'
+          ]) &&
+          incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+          isValidWalletTransaction(incoming(), userId);
+
+        // Transactions are immutable financial statement entries
+        allow update: if false;
+        allow delete: if isValidId(userId) && isValidId(transactionId) && isOwner(userId);
+      }
+
+      match /active_bundles/{bundleId} {
+        allow get: if isValidId(userId) && isValidId(bundleId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId);
+
+        allow create: if isValidId(userId) &&
+          isValidId(bundleId) &&
+          isOwner(userId) &&
+          incoming().keys().hasAll([
+            'userId', 'name', 'category', 'dataMb', 'minutes', 'smsCount',
+            'validityLabel', 'priceKes', 'createdAt'
+          ]) &&
+          incoming().keys().hasOnly([
+            'userId', 'name', 'category', 'dataMb', 'minutes', 'smsCount',
+            'validityLabel', 'priceKes', 'createdAt'
+          ]) &&
+          incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+          isValidActiveBundle(incoming(), userId);
+
+        allow update: if false;
+        allow delete: if isValidId(userId) && isValidId(bundleId) && isOwner(userId);
+      }
+
+      match /saved_payees/{payeeId} {
+        allow get: if isValidId(userId) && isValidId(payeeId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId);
+
+        allow create: if isValidId(userId) &&
+          isValidId(payeeId) &&
+          isOwner(userId) &&
+          incoming().keys().hasAll([
+            'userId', 'name', 'payeeType', 'identifier', 'createdAt', 'updatedAt'
+          ]) &&
+          incoming().keys().hasOnly([
+            'userId', 'name', 'payeeType', 'identifier', 'accountRef', 'createdAt', 'updatedAt'
+          ]) &&
+          incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+          incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+          isValidSavedPayee(incoming(), userId);
+
+        allow update: if isValidId(userId) &&
+          isValidId(payeeId) &&
+          isOwner(userId) &&
+          isValidSavedPayee(incoming(), userId) &&
+          incoming().userId == existing().userId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'name', 'payeeType', 'identifier', 'accountRef', 'updatedAt'
+          ]);
+
+        allow delete: if isValidId(userId) && isValidId(payeeId) && isOwner(userId);
+      }
+    }
+  }
+}

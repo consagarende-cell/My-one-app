@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">SafaOne</string>
+    <string name="app_tagline">Your Line, M-Pesa &amp; Rewards in One Place</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_mpesa">M-Pesa</string>
+    <string name="nav_bundles">Discover</string>
+    <string name="nav_account">Account</string>
+    <string name="sign_in_google">Sign in with Google</string>
+    <string name="sign_out">Sign Out</string>
+    <string name="currency_kes">KES</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
+</resources>

@@ -1,0 +1,167 @@
+{
+  "entities": {
+    "AccountProfile": {
+      "title": "AccountProfile",
+      "description": "User's SafaOne mobile line, M-Pesa wallet, savings, Fuliza, Bonga points, and Home Fibre profile.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated Firebase UID matching path {userId}" },
+        "displayName": { "type": "string", "description": "Account holder display name" },
+        "phoneNumber": { "type": "string", "description": "SafaOne mobile line number" },
+        "planName": { "type": "string", "description": "Active tariff plan name" },
+        "airtimeBalance": { "type": "number", "description": "Prepaid airtime balance in KES" },
+        "mpesaBalance": { "type": "number", "description": "Mobile money wallet balance in KES" },
+        "savingsBalance": { "type": "number", "description": "Locked savings vault balance in KES" },
+        "fulizaLimit": { "type": "number", "description": "Overdraft credit limit in KES" },
+        "fulizaUsed": { "type": "number", "description": "Currently utilized overdraft amount in KES" },
+        "dataBalanceMb": { "type": "integer", "description": "Remaining data bundle balance in MB" },
+        "minutesBalance": { "type": "integer", "description": "Remaining voice minutes" },
+        "smsBalance": { "type": "integer", "description": "Remaining SMS count" },
+        "bongaPoints": { "type": "integer", "description": "Loyalty reward points balance" },
+        "fibrePlanName": { "type": "string", "description": "Home Fibre broadband tier name" },
+        "fibreMonthlyFee": { "type": "number", "description": "Monthly Home Fibre fee in KES" },
+        "fibreActive": { "type": "boolean", "description": "Whether Home Fibre subscription is active" },
+        "fibreExpiryLabel": { "type": "string", "description": "Home Fibre billing cycle label" },
+        "hideBalances": { "type": "boolean", "description": "Privacy preference to mask balances" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update" }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "phoneNumber",
+        "planName",
+        "airtimeBalance",
+        "mpesaBalance",
+        "savingsBalance",
+        "fulizaLimit",
+        "fulizaUsed",
+        "dataBalanceMb",
+        "minutesBalance",
+        "smsBalance",
+        "bongaPoints",
+        "fibrePlanName",
+        "fibreMonthlyFee",
+        "fibreActive",
+        "fibreExpiryLabel",
+        "hideBalances",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WalletTransaction": {
+      "title": "WalletTransaction",
+      "description": "Immutable M-Pesa wallet, airtime, bundle, savings, or Bonga transaction receipt.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase UID" },
+        "receiptCode": { "type": "string", "description": "10-character transaction confirmation code" },
+        "type": {
+          "type": "string",
+          "enum": [
+            "SEND_MONEY",
+            "PAY_BILL",
+            "BUY_GOODS",
+            "BUY_AIRTIME",
+            "BUY_BUNDLE",
+            "DEPOSIT",
+            "WITHDRAW",
+            "SAVINGS_IN",
+            "SAVINGS_OUT",
+            "BONGA_REDEEM",
+            "FIBRE_PAY"
+          ]
+        },
+        "title": { "type": "string", "description": "Human-readable transaction summary" },
+        "counterparty": { "type": "string", "description": "Recipient phone, paybill, till, or bundle name" },
+        "amount": { "type": "number", "description": "Transaction principal amount" },
+        "fee": { "type": "number", "description": "Transaction fee in KES" },
+        "direction": { "type": "string", "enum": ["DEBIT", "CREDIT", "INFO"] },
+        "source": { "type": "string", "enum": ["MPESA", "AIRTIME", "BONGA", "SAVINGS"] },
+        "balanceAfter": { "type": "number", "description": "Resulting source balance after transaction" },
+        "note": { "type": "string", "description": "Optional user reference note" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation" }
+      },
+      "required": [
+        "userId",
+        "receiptCode",
+        "type",
+        "title",
+        "counterparty",
+        "amount",
+        "fee",
+        "direction",
+        "source",
+        "balanceAfter",
+        "createdAt"
+      ]
+    },
+    "ActiveBundle": {
+      "title": "ActiveBundle",
+      "description": "Active data, voice, SMS, or Tunukiwa bundle purchased on the user's line.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase UID" },
+        "name": { "type": "string", "description": "Bundle offer name" },
+        "category": { "type": "string", "enum": ["DATA", "VOICE", "ALL_IN_ONE", "SMS", "TUNUKIWA"] },
+        "dataMb": { "type": "integer", "description": "Data allowance in MB" },
+        "minutes": { "type": "integer", "description": "Voice minutes allowance" },
+        "smsCount": { "type": "integer", "description": "SMS allowance" },
+        "validityLabel": { "type": "string", "description": "Validity duration label" },
+        "priceKes": { "type": "number", "description": "Bundle price in KES" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation" }
+      },
+      "required": [
+        "userId",
+        "name",
+        "category",
+        "dataMb",
+        "minutes",
+        "smsCount",
+        "validityLabel",
+        "priceKes",
+        "createdAt"
+      ]
+    },
+    "SavedPayee": {
+      "title": "SavedPayee",
+      "description": "Saved favorite contact, Paybill business, or Buy Goods Till merchant.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase UID" },
+        "name": { "type": "string", "description": "Saved beneficiary display name" },
+        "payeeType": { "type": "string", "enum": ["PHONE", "PAYBILL", "TILL"] },
+        "identifier": { "type": "string", "description": "Phone number, Paybill business number, or Till number" },
+        "accountRef": { "type": "string", "description": "Optional Paybill account reference" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update" }
+      },
+      "required": [
+        "userId",
+        "name",
+        "payeeType",
+        "identifier",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/AccountProfile" },
+      "description": "Per-user SafaOne telecom and M-Pesa wallet account document."
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/WalletTransaction" },
+      "description": "User's M-Pesa, airtime, bundle, and Bonga transaction statement items."
+    },
+    "/users/{userId}/active_bundles/{bundleId}": {
+      "schema": { "$ref": "#/entities/ActiveBundle" },
+      "description": "Active bundles purchased by the user."
+    },
+    "/users/{userId}/saved_payees/{payeeId}": {
+      "schema": { "$ref": "#/entities/SavedPayee" },
+      "description": "User's favorite contacts, Paybills, and Tills."
+    }
+  }
+}
